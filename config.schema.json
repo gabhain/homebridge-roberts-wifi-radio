@@ -1,0 +1,28 @@
+{
+  "pluginAlias": "RobertsRadioPlatform",
+  "pluginType": "platform",
+  "headerDisplay": "Roberts Radio Settings",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Display Name",
+        "type": "string",
+        "default": "Roberts Radio",
+        "required": true
+      },
+      "ip": {
+        "title": "Radio IP Address",
+        "type": "string",
+        "default": "10.0.0.136",
+        "required": true
+      },
+      "pin": {
+        "title": "UNDOK PIN",
+        "type": "string",
+        "default": "1234",
+        "required": true
+      }
+    }
+  }
+}
