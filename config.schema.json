@@ -8,21 +8,22 @@
       "name": {
         "title": "Display Name",
         "type": "string",
-        "default": "Roberts Radio",
-        "required": true
+        "default": "Roberts Radio"
       },
       "ip": {
         "title": "Radio IP Address",
         "type": "string",
-        "default": "XX.XX.XX.XX",
-        "required": true
+        "default": "XX.XX.XX.XX"
       },
       "pin": {
         "title": "UNDOK PIN",
         "type": "string",
-        "default": "1234",
-        "required": true
+        "default": "1234"
       }
-    }
+    },
+    "required": [
+      "name",
+      "ip"
+    ]
   }
 }
