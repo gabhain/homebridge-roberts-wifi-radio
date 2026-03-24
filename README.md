@@ -31,7 +31,7 @@ Add the following to the `platforms` array in your Homebridge `config.json`:
 {
   "platform": "RobertsRadioPlatform",
   "name": "Kitchen Radio",
-  "ip": "10.0.0.136",
+  "ip": "XX.XX.XX.XX",
   "pin": "1234"
 }
 ```

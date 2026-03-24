@@ -14,7 +14,7 @@
       "ip": {
         "title": "Radio IP Address",
         "type": "string",
-        "default": "10.0.0.136",
+        "default": "XX.XX.XX.XX",
         "required": true
       },
       "pin": {
