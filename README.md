@@ -68,10 +68,3 @@ The plugin is pre-configured with the following source IDs:
 | 9  | Bluetooth |
 | 10 | AUX |
 
-## Contributing
-
-Feel free to open issues or submit pull requests on the [GitHub repository](https://github.com/YOUR_USERNAME/homebridge-roberts-radio).
-
-## License
-
-Distributed under the ISC License.
