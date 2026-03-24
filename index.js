@@ -21,32 +21,36 @@ class RobertsRadioPlatform {
     }
 
     this.api.on('didFinishLaunching', () => {
-      this.setupAccessory();
+      this.setupAccessories();
     });
   }
 
-  setupAccessory() {
+  setupAccessories() {
     const name = this.config.name || 'Roberts Radio';
-    const uuid = this.api.hap.uuid.generate('homebridge:roberts-radio:' + this.config.ip);
-    const accessory = new this.api.platformAccessory(name, uuid);
+    const radioUuid = this.api.hap.uuid.generate('homebridge:roberts-radio:' + this.config.ip);
+    const volumeUuid = this.api.hap.uuid.generate('homebridge:roberts-radio:volume:' + this.config.ip);
 
-    // Set Category to AUDIO_RECEIVER so it shows up correctly
-    accessory.category = Categories.AUDIO_RECEIVER;
+    const radioAccessory = new this.api.platformAccessory(name, radioUuid);
+    const volumeAccessory = new this.api.platformAccessory(name + ' Volume', volumeUuid);
 
-    // Pass the name explicitly to avoid config access issues
-    new RobertsRadio(this.log, this.config, accessory, this.api);
+    radioAccessory.category = Categories.AUDIO_RECEIVER;
+    volumeAccessory.category = Categories.LIGHTBULB;
+
+    new RobertsRadio(this.log, this.config, radioAccessory, volumeAccessory, this.api);
     
-    // Publish as External Accessory
-    this.api.publishExternalAccessories('homebridge-roberts-radio', [accessory]);
-    this.log.info(`Radio "${name}" published as an external accessory. Add it manually in the Home app using your Homebridge PIN.`);
+    // Publish both as External Accessories
+    this.api.publishExternalAccessories('homebridge-roberts-radio', [radioAccessory, volumeAccessory]);
+    
+    this.log.info(`Radio "${name}" and Volume Slider published as external accessories. Add them manually in the Home app.`);
   }
 }
 
 class RobertsRadio {
-  constructor(log, config, accessory, api) {
+  constructor(log, config, radioAccessory, volumeAccessory, api) {
     this.log = log;
     this.config = config;
-    this.accessory = accessory;
+    this.accessory = radioAccessory;
+    this.volumeAccessory = volumeAccessory;
     this.api = api;
     this.ip = config.ip;
     this.pin = config.pin || '1234';
@@ -96,13 +100,22 @@ class RobertsRadio {
     const Characteristic = this.api.hap.Characteristic;
     const name = this.config.name || 'Roberts Radio';
 
+    // --- Radio Accessory Info ---
     const informationService = this.accessory.getService(Service.AccessoryInformation);
     informationService
       .setCharacteristic(Characteristic.Manufacturer, 'Roberts')
       .setCharacteristic(Characteristic.Model, 'Radio')
       .setCharacteristic(Characteristic.SerialNumber, this.ip);
 
-    const tvService = this.accessory.addService(Service.Television, name, 'RadioTVService');
+    // --- Volume Accessory Info ---
+    const volInfoService = this.volumeAccessory.getService(Service.AccessoryInformation);
+    volInfoService
+      .setCharacteristic(Characteristic.Manufacturer, 'Roberts')
+      .setCharacteristic(Characteristic.Model, 'Radio Volume')
+      .setCharacteristic(Characteristic.SerialNumber, this.ip + '-vol');
+
+    // --- TV Service (Radio) ---
+    const tvService = this.accessory.getService(Service.Television) || this.accessory.addService(Service.Television, name, 'RadioTVService');
     tvService.setCharacteristic(Characteristic.ConfiguredName, name);
     tvService.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
@@ -142,14 +155,22 @@ class RobertsRadio {
             const state = await this.getFSAPI('netRemote.nav.state');
             await this.setFSAPI('netRemote.nav.state', state === '1' ? '2' : '1');
             break;
+          case Characteristic.RemoteKey.VOLUME_UP:
+            const volUp = await this.getFSAPI('netRemote.sys.audio.volume');
+            await this.setFSAPI('netRemote.sys.audio.volume', Math.min(parseInt(volUp || 0) + 1, 32));
+            break;
+          case Characteristic.RemoteKey.VOLUME_DOWN:
+            const volDown = await this.getFSAPI('netRemote.sys.audio.volume');
+            await this.setFSAPI('netRemote.sys.audio.volume', Math.max(parseInt(volDown || 0) - 1, 0));
+            break;
         }
         callback();
       });
 
-    // Volume
+    // --- Television Speaker (for Remote App) ---
     let speakerService = this.accessory.getService(Service.TelevisionSpeaker);
     if (!speakerService) {
-      speakerService = this.accessory.addService(Service.TelevisionSpeaker, name + ' Volume Speaker', 'RadioSpeakerService');
+      speakerService = this.accessory.addService(Service.TelevisionSpeaker, name + ' Speaker', 'RadioSpeakerService');
     }
     
     speakerService
@@ -177,32 +198,18 @@ class RobertsRadio {
         callback();
       });
 
-    speakerService.getCharacteristic(Characteristic.VolumeSelector)
-      .on('set', async (val, callback) => {
-        const currentVal = await this.getFSAPI('netRemote.sys.audio.volume');
-        let newVol = parseInt(currentVal || 0);
-        if (val === Characteristic.VolumeSelector.INCREMENT) {
-          newVol = Math.min(newVol + 1, 32);
-        } else if (val === Characteristic.VolumeSelector.DECREMENT) {
-          newVol = Math.max(newVol - 1, 0);
-        }
-        await this.setFSAPI('netRemote.sys.audio.volume', newVol);
-        callback();
-      });
-
     tvService.addLinkedService(speakerService);
 
-    // Additional Volume Slider as a Lightbulb to show up in the Home App
-    // We do NOT link this to tvService so it shows up as a separate tile
-    let volumeSliderService = this.accessory.getService(Service.Lightbulb);
+    // --- Separate Volume Slider (Lightbulb) ---
+    let volumeSliderService = this.volumeAccessory.getService(Service.Lightbulb);
     if (!volumeSliderService) {
-      volumeSliderService = this.accessory.addService(Service.Lightbulb, name + ' Volume Slider', 'RadioVolumeSlider');
+      volumeSliderService = this.volumeAccessory.addService(Service.Lightbulb, name + ' Volume', 'RadioVolumeSlider');
     }
     
     volumeSliderService.getCharacteristic(Characteristic.On)
       .on('get', async (callback) => {
         const val = await this.getFSAPI('netRemote.sys.audio.mute');
-        callback(null, val === '0'); // If mute is 0, then "On" is true
+        callback(null, val === '0'); 
       })
       .on('set', async (val, callback) => {
         await this.setFSAPI('netRemote.sys.audio.mute', val ? 0 : 1);
@@ -220,9 +227,9 @@ class RobertsRadio {
         callback();
       });
 
-    // Inputs
+    // --- Inputs (Linked to TV) ---
     this.modes.forEach((m) => {
-      const input = this.accessory.addService(Service.InputSource, m.name, 'input' + m.id);
+      const input = this.accessory.getService('input' + m.id) || this.accessory.addService(Service.InputSource, m.name, 'input' + m.id);
       input
         .setCharacteristic(Characteristic.Identifier, m.id)
         .setCharacteristic(Characteristic.ConfiguredName, m.name)
