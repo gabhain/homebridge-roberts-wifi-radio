@@ -147,9 +147,9 @@ class RobertsRadio {
       });
 
     // Volume
-    let speakerService = this.accessory.getService('RadioSpeakerService');
+    let speakerService = this.accessory.getService(Service.TelevisionSpeaker);
     if (!speakerService) {
-      speakerService = this.accessory.addService(Service.TelevisionSpeaker, name + ' Volume', 'RadioSpeakerService');
+      speakerService = this.accessory.addService(Service.TelevisionSpeaker, name + ' Volume Speaker', 'RadioSpeakerService');
     }
     
     speakerService
@@ -193,9 +193,10 @@ class RobertsRadio {
     tvService.addLinkedService(speakerService);
 
     // Additional Volume Slider as a Lightbulb to show up in the Home App
-    let volumeSliderService = this.accessory.getService('RadioVolumeSlider');
+    // We do NOT link this to tvService so it shows up as a separate tile
+    let volumeSliderService = this.accessory.getService(Service.Lightbulb);
     if (!volumeSliderService) {
-      volumeSliderService = this.accessory.addService(Service.Lightbulb, name + ' Volume', 'RadioVolumeSlider');
+      volumeSliderService = this.accessory.addService(Service.Lightbulb, name + ' Volume Slider', 'RadioVolumeSlider');
     }
     
     volumeSliderService.getCharacteristic(Characteristic.On)
@@ -218,8 +219,6 @@ class RobertsRadio {
         await this.setFSAPI('netRemote.sys.audio.volume', fsVol);
         callback();
       });
-
-    tvService.addLinkedService(volumeSliderService);
 
     // Inputs
     this.modes.forEach((m) => {
