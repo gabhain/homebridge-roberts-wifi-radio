@@ -27,21 +27,24 @@ class RobertsRadioPlatform {
 
   setupAccessories() {
     const name = this.config.name || 'Roberts Radio';
-    const radioUuid = this.api.hap.uuid.generate('homebridge:roberts-radio:' + this.config.ip);
-    const volumeUuid = this.api.hap.uuid.generate('homebridge:roberts-radio:volume:' + this.config.ip);
+    // Use v2 UUIDs to bypass any existing HomeKit cache issues
+    const radioUuid = this.api.hap.uuid.generate('homebridge:roberts-radio-v2:' + this.config.ip);
+    const volumeUuid = this.api.hap.uuid.generate('homebridge:roberts-radio-vol-v2:' + this.config.ip);
 
     const radioAccessory = new this.api.platformAccessory(name, radioUuid);
     const volumeAccessory = new this.api.platformAccessory(name + ' Volume', volumeUuid);
 
-    radioAccessory.category = Categories.AUDIO_RECEIVER;
+    // Categories: TELEVISION for the radio, LIGHTBULB for the volume slider
+    radioAccessory.category = Categories.TELEVISION;
     volumeAccessory.category = Categories.LIGHTBULB;
 
     new RobertsRadio(this.log, this.config, radioAccessory, volumeAccessory, this.api);
     
-    // Publish both as External Accessories
-    this.api.publishExternalAccessories('homebridge-roberts-radio', [radioAccessory, volumeAccessory]);
+    // Publish as separate External Accessories
+    this.api.publishExternalAccessories('homebridge-roberts-radio', [radioAccessory]);
+    this.api.publishExternalAccessories('homebridge-roberts-radio', [volumeAccessory]);
     
-    this.log.info(`Radio "${name}" and Volume Slider published as external accessories. Add them manually in the Home app.`);
+    this.log.info(`Radio "${name}" and Volume Slider published separately as external accessories.`);
   }
 }
 
@@ -118,6 +121,7 @@ class RobertsRadio {
     const tvService = this.accessory.getService(Service.Television) || this.accessory.addService(Service.Television, name, 'RadioTVService');
     tvService.setCharacteristic(Characteristic.ConfiguredName, name);
     tvService.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
+    tvService.setCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
 
     // Power
     tvService.getCharacteristic(Characteristic.Active)
@@ -229,17 +233,16 @@ class RobertsRadio {
 
     // --- Inputs (Linked to TV) ---
     this.modes.forEach((m) => {
-      const inputName = m.name;
       const inputId = 'input' + m.id;
       let input = this.accessory.getService(inputId);
       
       if (!input) {
-        input = this.accessory.addService(Service.InputSource, inputName, inputId);
+        input = this.accessory.addService(Service.InputSource, m.name, inputId);
       }
 
       input
         .setCharacteristic(Characteristic.Identifier, m.id)
-        .setCharacteristic(Characteristic.ConfiguredName, inputName)
+        .setCharacteristic(Characteristic.ConfiguredName, m.name)
         .setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
         .setCharacteristic(Characteristic.InputSourceType, Characteristic.InputSourceType.APPLICATION);
 
