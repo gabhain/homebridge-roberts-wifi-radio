@@ -1,7 +1,7 @@
 {
   "name": "homebridge-roberts-wifi-radio",
   "version": "1.1.5",
-  "description": "Homebridge plugin for Roberts WiFi Radios using FSAPI/UNDOK",
+  "description": "Homebridge plugin to control Roberts WiFi Radios, and other UNDOK/FSAPI (Frontier Silicon) compatible devices as a Television accessory with volume control.",
   "displayName": "Roberts WiFi Radio",
   "main": "index.js",
   "keywords": [
@@ -14,7 +14,9 @@
     "smart-radio",
     "fsapi",
     "undok",
-    "audio"
+    "audio",
+    "frontier-silicon",
+    "homebridge-verified"
   ],
   "license": "MIT",
   "repository": {
