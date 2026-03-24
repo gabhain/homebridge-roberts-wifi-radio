@@ -229,10 +229,17 @@ class RobertsRadio {
 
     // --- Inputs (Linked to TV) ---
     this.modes.forEach((m) => {
-      const input = this.accessory.getService('input' + m.id) || this.accessory.addService(Service.InputSource, m.name, 'input' + m.id);
+      const inputName = m.name;
+      const inputId = 'input' + m.id;
+      let input = this.accessory.getService(inputId);
+      
+      if (!input) {
+        input = this.accessory.addService(Service.InputSource, inputName, inputId);
+      }
+
       input
         .setCharacteristic(Characteristic.Identifier, m.id)
-        .setCharacteristic(Characteristic.ConfiguredName, m.name)
+        .setCharacteristic(Characteristic.ConfiguredName, inputName)
         .setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
         .setCharacteristic(Characteristic.InputSourceType, Characteristic.InputSourceType.APPLICATION);
 
