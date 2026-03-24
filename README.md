@@ -1,4 +1,4 @@
-# Homebridge Roberts Radio Plugin
+# Homebridge Roberts Radio
 
 A Homebridge plugin to control Roberts Radios (and other UNDOK/FSAPI compatible devices) via the Apple Home app.
 
@@ -8,8 +8,9 @@ This plugin exposes your radio as a **Television** accessory, allowing for power
 
 - **Power Control**: Turn the radio on or off.
 - **Source Selection**: Switch between Internet Radio, Spotify, DAB, FM, Bluetooth, and more.
-- **Volume Control**: Adjust volume and mute status (visible in the accessory settings or via the physical volume buttons in the Remote widget).
-- **Remote Control**: Use the Apple TV Remote widget in Control Center to Play/Pause or skip tracks (Next/Previous).
+- **Visible Volume Slider**: A separate "Volume" lightbulb-style slider for easy adjustment and visibility in the Home app.
+- **Mute Control**: Toggle mute using the volume slider's on/off switch or the accessory settings.
+- **Remote Control**: Use the Apple TV Remote widget in Control Center to adjust volume, Play/Pause, or skip tracks.
 - **Device Info**: Displays model name, firmware version, and IP address.
 
 ## Installation
