@@ -147,7 +147,11 @@ class RobertsRadio {
       });
 
     // Volume
-    const speakerService = this.accessory.addService(Service.TelevisionSpeaker, name + ' Volume', 'RadioSpeakerService');
+    let speakerService = this.accessory.getService('RadioSpeakerService');
+    if (!speakerService) {
+      speakerService = this.accessory.addService(Service.TelevisionSpeaker, name + ' Volume', 'RadioSpeakerService');
+    }
+    
     speakerService
       .setCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE)
       .setCharacteristic(Characteristic.VolumeControlType, Characteristic.VolumeControlType.ABSOLUTE);
@@ -163,7 +167,59 @@ class RobertsRadio {
         callback();
       });
 
+    speakerService.getCharacteristic(Characteristic.Mute)
+      .on('get', async (callback) => {
+        const val = await this.getFSAPI('netRemote.sys.audio.mute');
+        callback(null, val === '1' ? true : false);
+      })
+      .on('set', async (val, callback) => {
+        await this.setFSAPI('netRemote.sys.audio.mute', val ? 1 : 0);
+        callback();
+      });
+
+    speakerService.getCharacteristic(Characteristic.VolumeSelector)
+      .on('set', async (val, callback) => {
+        const currentVal = await this.getFSAPI('netRemote.sys.audio.volume');
+        let newVol = parseInt(currentVal || 0);
+        if (val === Characteristic.VolumeSelector.INCREMENT) {
+          newVol = Math.min(newVol + 1, 32);
+        } else if (val === Characteristic.VolumeSelector.DECREMENT) {
+          newVol = Math.max(newVol - 1, 0);
+        }
+        await this.setFSAPI('netRemote.sys.audio.volume', newVol);
+        callback();
+      });
+
     tvService.addLinkedService(speakerService);
+
+    // Additional Volume Slider as a Lightbulb to show up in the Home App
+    let volumeSliderService = this.accessory.getService('RadioVolumeSlider');
+    if (!volumeSliderService) {
+      volumeSliderService = this.accessory.addService(Service.Lightbulb, name + ' Volume', 'RadioVolumeSlider');
+    }
+    
+    volumeSliderService.getCharacteristic(Characteristic.On)
+      .on('get', async (callback) => {
+        const val = await this.getFSAPI('netRemote.sys.audio.mute');
+        callback(null, val === '0'); // If mute is 0, then "On" is true
+      })
+      .on('set', async (val, callback) => {
+        await this.setFSAPI('netRemote.sys.audio.mute', val ? 0 : 1);
+        callback();
+      });
+
+    volumeSliderService.getCharacteristic(Characteristic.Brightness)
+      .on('get', async (callback) => {
+        const val = await this.getFSAPI('netRemote.sys.audio.volume');
+        callback(null, Math.round((parseInt(val || 0) / 32) * 100));
+      })
+      .on('set', async (val, callback) => {
+        const fsVol = Math.round((val / 100) * 32);
+        await this.setFSAPI('netRemote.sys.audio.volume', fsVol);
+        callback();
+      });
+
+    tvService.addLinkedService(volumeSliderService);
 
     // Inputs
     this.modes.forEach((m) => {
